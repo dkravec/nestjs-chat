@@ -48,6 +48,19 @@ export class ChatGateway implements OnModuleInit {
     });
   }
 
+  @SubscribeMessage('clientMessage')
+  onClientMessage(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
+    if (!body.sendTo) return console.log('return 1');
+
+    if (!this.connections[`${body.sendTo}`]) return console.log('return 2');
+
+    const sendToClient = this.connections[`${body.sendTo}`].socket_id;
+
+    this.server.to(sendToClient).emit('clientMessage', {
+      msg: 'this is a message',
+    });
+  }
+
   @SubscribeMessage('userLogin')
   onUserLogin(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
     // console.log(this.server.sockets.server);
@@ -74,5 +87,35 @@ export class ChatGateway implements OnModuleInit {
       msg: 'new message',
       content: body,
     });
+    console.log(client);
   }
 }
+
+/* Tests
+@userLogin - Tester 1
+{
+    "id" : 1,
+    "user_id" : 1456,
+    "user_email" : "tester1"
+}
+
+@userLogin - Tester 2
+{   
+    "id" : 2,
+    "user_id" : 2637,
+    "user_email" : "tester2"
+}
+
+@newMessage - Tester 1
+{
+    "id" : 1,
+    "content" : "This is a message to 2",
+    "sendTo" : "tester2"
+}
+@newMessage - Tester 1
+{
+    "id" : 2,
+    "content" : "This is going back now to 1.",
+    "sendTo" : "tester1"
+}
+*/
