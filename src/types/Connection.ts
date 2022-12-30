@@ -1,8 +1,7 @@
 type Connection = {
-  // socket_id: string;
-  // user_id: number;
   socketId: string;
   userId: number;
+  userEmail: string;
 };
 
 export default Connection;

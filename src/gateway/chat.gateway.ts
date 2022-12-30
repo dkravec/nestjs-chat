@@ -1,15 +1,12 @@
-import { Body, OnModuleInit } from '@nestjs/common';
+import { OnModuleInit } from '@nestjs/common';
 import {
   SubscribeMessage,
   WebSocketGateway,
   MessageBody,
   WebSocketServer,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-  OnGatewayInit,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Namespace, Server, Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { Message, Connection } from '../types/types';
 
 // @WebSocketGateway({
@@ -67,6 +64,7 @@ export class ChatGateway implements OnModuleInit {
     connections.set(body.userEmail, {
       socketId: client.id,
       userId: body.userId,
+      userEmail: body.userEmail,
     });
 
     this.server.emit('onMessage', {
