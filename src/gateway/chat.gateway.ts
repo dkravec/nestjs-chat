@@ -17,7 +17,9 @@ import { Message, Connection } from '../types/types';
 //     }
 // })
 
+// https://howtodoinjava.com/typescript/maps/
 const messages: Message[] = [];
+const connections: Map<string, Connection> = new Map<string, Connection>();
 
 @WebSocketGateway({
   namespace: 'chat', // connects to /chat
@@ -26,7 +28,7 @@ const messages: Message[] = [];
 export class ChatGateway implements OnModuleInit {
   @WebSocketServer() //io: Namespace;
   server: Server;
-  connections: any = {};
+
   onModuleInit() {
     this.server.on('connection', (socket) => {
       console.log(socket.id);
@@ -52,9 +54,11 @@ export class ChatGateway implements OnModuleInit {
   onClientMessage(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
     if (!body.sendTo) return console.log('return 1');
 
-    if (!this.connections[`${body.sendTo}`]) return console.log('return 2');
+    // if (!this.connections[`${body.sendTo}`]) return console.log('return 2');
 
-    const sendToClient = this.connections[`${body.sendTo}`].socket_id;
+    // const sendToClient = this.connections[`${body.sendTo}`].socket_id;
+    if (!connections.has(body.sendTo)) return console.log('2 -- missing');
+    const sendToClient = connections.get(body.sendTo).socketId;
 
     this.server.to(sendToClient).emit('clientMessage', {
       msg: 'this is a message',
@@ -75,11 +79,17 @@ export class ChatGateway implements OnModuleInit {
         "user_email" : "test@tester.com"
       }
     */
+    connections.set(body.userEmail, {
+      socketId: client.id,
+      userId: body.userId,
+    });
+    /*
     this.connections[`${body.user_email}`] = {
       socket_id: client.id,
       user_id: body.user_id,
     };
-    console.log(this.connections);
+    */
+    // console.log(this.connections);
     //  Connection = {
 
     // };
