@@ -1,4 +1,4 @@
-import { OnModuleInit } from '@nestjs/common';
+import { Body, OnModuleInit } from '@nestjs/common';
 import {
   SubscribeMessage,
   WebSocketGateway,
@@ -31,14 +31,49 @@ export class ChatGateway implements OnModuleInit {
 
   onModuleInit() {
     this.server.on('connection', (socket) => {
-      console.log(socket.id);
+      let clientEmail: string = null;
+      console.log(`connection: ${socket.id}`);
+      socket.on('userLogin', (body) => {
+        if (body.userEmail) clientEmail = body.userEmail;
+      });
+
+      socket.on('disconnect', () => {
+        if (!connections.has(clientEmail))
+          return console.log('1 -- never properly connected');
+
+        const userConnection = connections.get(clientEmail);
+
+        if (userConnection.socketId != socket.id)
+          return console.log('2 -- socket wasnt paired with provided email');
+
+        console.log(connections);
+        console.log(`disconnecting: ${socket.id}`);
+        connections.delete(clientEmail);
+        console.log(connections);
+      });
     });
   }
-  // handleDisconnect() {
-  //   this.server.on('disconnection', (socket) => {
-  //     console.log(socket.id);
-  //   });
-  // }
+
+  @SubscribeMessage('userLogin')
+  onUserLogin(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
+    if (!body.userId) return console.log('1 --no userId');
+    if (!body.userEmail) return console.log('2 -- no email');
+    if (connections.has(body.userEmail))
+      return console.log('3 -- user already in');
+
+    console.log(`userLogin: ${client.id} - ${body.userEmail}`);
+    messages.push(body);
+
+    connections.set(body.userEmail, {
+      socketId: client.id,
+      userId: body.userId,
+    });
+
+    this.server.emit('onMessage', {
+      msg: 'new message',
+      content: body,
+    });
+  }
 
   @SubscribeMessage('newMessage')
   onNewMessage(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
@@ -64,25 +99,6 @@ export class ChatGateway implements OnModuleInit {
 
     this.server.to(sendToClient).emit('clientMessage', {
       content: body.content,
-    });
-  }
-
-  @SubscribeMessage('userLogin')
-  onUserLogin(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
-    if (!body.userId) return console.log('no userId');
-    if (!body.userEmail) return console.log('no email');
-    if (connections.has(body.userId)) return console.log('user already in');
-
-    messages.push(body);
-
-    connections.set(body.userEmail, {
-      socketId: client.id,
-      userId: body.userId,
-    });
-
-    this.server.emit('onMessage', {
-      msg: 'new message',
-      content: body,
     });
   }
 }
