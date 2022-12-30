@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import { Namespace, Server, Socket } from 'socket.io';
 import { Message, Connection } from '../types/types';
+
 // @WebSocketGateway({
 //     cors: {
 //         origin: "blank"
@@ -26,14 +27,18 @@ const connections: Map<string, Connection> = new Map<string, Connection>();
 })
 //  OnModuleInit, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 export class ChatGateway implements OnModuleInit {
-  @WebSocketServer() //io: Namespace;
-  server: Server;
+  @WebSocketServer() server: Server;
 
   onModuleInit() {
     this.server.on('connection', (socket) => {
       console.log(socket.id);
     });
   }
+  // handleDisconnect() {
+  //   this.server.on('disconnection', (socket) => {
+  //     console.log(socket.id);
+  //   });
+  // }
 
   @SubscribeMessage('newMessage')
   onNewMessage(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
@@ -52,80 +57,60 @@ export class ChatGateway implements OnModuleInit {
 
   @SubscribeMessage('clientMessage')
   onClientMessage(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
-    if (!body.sendTo) return console.log('return 1');
-
-    // if (!this.connections[`${body.sendTo}`]) return console.log('return 2');
-
-    // const sendToClient = this.connections[`${body.sendTo}`].socket_id;
+    if (!body.sendTo) return console.log('1 -- return 1');
     if (!connections.has(body.sendTo)) return console.log('2 -- missing');
+    if (!body.content) return console.log('3 -- no content');
     const sendToClient = connections.get(body.sendTo).socketId;
 
     this.server.to(sendToClient).emit('clientMessage', {
-      msg: 'this is a message',
+      content: body.content,
     });
   }
 
   @SubscribeMessage('userLogin')
   onUserLogin(@ConnectedSocket() client: Socket, @MessageBody() body: any) {
-    // console.log(this.server.sockets.server);
-    // if (!body.userId) this.server.to()
+    if (!body.userId) return console.log('no userId');
+    if (!body.userEmail) return console.log('no email');
+    if (connections.has(body.userId)) return console.log('user already in');
+
     messages.push(body);
-    console.log(messages);
-    /*
-      {
-        "id" : 1,
-        "content" : "This is a test",
-        "user_id" : 2,
-        "user_email" : "test@tester.com"
-      }
-    */
+
     connections.set(body.userEmail, {
       socketId: client.id,
       userId: body.userId,
     });
-    /*
-    this.connections[`${body.user_email}`] = {
-      socket_id: client.id,
-      user_id: body.user_id,
-    };
-    */
-    // console.log(this.connections);
-    //  Connection = {
 
-    // };
     this.server.emit('onMessage', {
       msg: 'new message',
       content: body,
     });
-    console.log(client);
   }
 }
 
 /* Tests
-@userLogin - Tester 1
-{
+-- user 1
+{   
     "id" : 1,
-    "user_id" : 1456,
-    "user_email" : "tester1"
+    "content" : "Test from user1 to user3",
+    "userId" : 6337,
+    "userEmail" : "tester1",
+    "sendTo" : "tester3"
 }
 
-@userLogin - Tester 2
+-- user 2
 {   
     "id" : 2,
-    "user_id" : 2637,
-    "user_email" : "tester2"
+    "content" : "Test from user2 to user1",
+    "userId" : 2637,
+    "userEmail" : "tester2",
+    "sendTo" : "tester1"
 }
-
-@newMessage - Tester 1
-{
-    "id" : 1,
-    "content" : "This is a message to 2",
-    "sendTo" : "tester2"
-}
-@newMessage - Tester 1
-{
-    "id" : 2,
-    "content" : "This is going back now to 1.",
+-- user 3
+{   
+    "id" : 3,
+    "content" : "Test from user3 to user1",
+    "userId" : 597,
+    "userEmail" : "tester3",
     "sendTo" : "tester1"
 }
 */
