@@ -9,20 +9,16 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Message, Connection } from '../types/types';
 
-// @WebSocketGateway({
-//     cors: {
-//         origin: "blank"
-//     }
-// })
-
 // https://howtodoinjava.com/typescript/maps/
 const messages: Message[] = [];
 const connections: Map<string, Connection> = new Map<string, Connection>();
 
 @WebSocketGateway({
   namespace: 'chat', // connects to /chat
+  cors: {
+    origin: 'http://localhost:4200',
+  },
 })
-//  OnModuleInit, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 export class ChatGateway implements OnModuleInit {
   @WebSocketServer() server: Server;
 
@@ -97,6 +93,8 @@ export class ChatGateway implements OnModuleInit {
 
     this.server.to(sendToClient).emit('clientMessage', {
       content: body.content,
+      userEmail: body.userEmail,
+      userTo: body.sendTo,
     });
   }
 }
